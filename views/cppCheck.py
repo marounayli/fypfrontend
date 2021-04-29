@@ -5,7 +5,7 @@ import plotly.express as px
 import dash_table
 import requests
 from app import app
-import dash
+from dash.dependencies import Input, Output
 
 labels = ["error", "performance", "portability", "style", "warning"]
 
@@ -43,29 +43,17 @@ def parse_response(payload):
     return res
 
 
-df = parse_response(fetch_data(request_url))
-fig = px.line(df, x="Builds", y=labels, height=800, title="CppCheck Data")
-fig.update_traces(mode='markers+lines')
-fig.update_layout(
-    paper_bgcolor="LightSteelBlue",
-    xaxis=dict(
-        showline=True,
-        showgrid=True,
-        showticklabels=True,
-        linewidth=2,
-        ticks='outside',
-        tickfont=dict(
-            family='Arial',
-            size=12,
-            color='rgb(82, 82, 82)',
-        ),
-    ),
-)
-mydata = []
 cpp_check_layout = [html.Div([html.H3("Statistics on the latest cppChecks"),
+                              # html.Button("Refresh", id="button", n_clicks=0),
+                              dbc.Button(
+                                  "Refresh",
+                                  id="button",
+                                  className="mb-3 order-button",
+                                  color="primary",
+                              ),
                               dcc.Graph(
-                                  figure=fig,
-                                  id='welcome-to-cpp-check'
+                                  figure={},
+                                  id='graph'
                               ),
                               dash_table.DataTable(
                                   id='table',
@@ -93,19 +81,31 @@ cpp_check_layout = [html.Div([html.H3("Statistics on the latest cppChecks"),
                               ])]
 
 
-@app.callback(
-    dash.dependencies.Output('dd-output-container', 'children'),
-    [dash.dependencies.Input('Primary', "n-clicks")])
-def on_button_click(n):
-    if n is None:
-        return "Pepehands"
-    else:
-        return f"Clicked {n} times."
+@app.callback(Output('graph', 'figure'), [Input('button', 'n_clicks')])
+def update_chart(n_clicks):
+    print("Clicked")
+    df = parse_response(fetch_data(request_url))
+    fig = px.line(df, x="Builds", y=labels, height=800, title="CppCheck Data")
+    fig.update_traces(mode='markers+lines')
+    fig.update_layout(
+        paper_bgcolor="LightSteelBlue",
+        xaxis=dict(
+            showline=True,
+            showgrid=True,
+            showticklabels=True,
+            linewidth=2,
+            ticks='outside',
+            tickfont=dict(
+                family='Arial',
+                size=12,
+                color='rgb(82, 82, 82)',
+            ),
+        ),
+    )
+    return fig
 
 # @app.callback(
 #     dash.dependencies.Output('dd-output-container', 'children'),
 #     [dash.dependencies.Input('aggregations_dropdown', 'value')])
 # def update_output(value):
 #     return 'You have selected "{}"'.format(value)
-
-
