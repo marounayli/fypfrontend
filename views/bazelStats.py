@@ -3,6 +3,9 @@ import dash_html_components as html
 import pandas as pd
 import plotly.express as px
 import requests
+import dash
+
+from app import app
 
 agg_request_url = "http://localhost:8081/bazel-stats/agg"
 aggregationSize = 2
@@ -20,6 +23,10 @@ df = pd.DataFrame({
 
 })
 
+body2 = {
+    "listOfBuildNames": []
+}
+
 
 def fetch_data_aggregation(request):
     aggregation_request = requests.post(request, json=body, headers=headers)
@@ -34,10 +41,10 @@ def fetch_data_last_n_bazel_stats(request):
 
 
 def fetch_latest_build_names():
-    build_names_json = requests.get("http://localhost:8081/bazel-stats/build-names/3").json()
+    build_names_json = requests.get("http://localhost:8081/bazel-stats/build-names/10").json()
     build_names_list = []
     for build in build_names_json:
-        build_names_list.insert(0,build['buildName'])
+        build_names_list.insert(0, build['buildName'])
 
     return pd.DataFrame(build_names_list, columns=['name']).name.unique()
 
@@ -54,7 +61,6 @@ def parse_data(json_data):
 
 def compare_data(json_data):
     json_data2 = fetch_data_last_n_bazel_stats("http://localhost:8081/bazel-stats/2")
-
 
     return parse_data(json_data)
 
@@ -78,15 +84,16 @@ bazel_stats_layout = html.Div(children=[
         figure=fig
     ),
 
-
-    html.Div([html.P()
-                   , html.H5('Latest Bazel Builds')
-                   , dcc.Dropdown(id='country-drop'
-                                  , options=[
+    html.Div([
+        dcc.Dropdown(
+            id='dd-output-bazel-build-names-container-dropdown',
+            options=[
                 {'label': i, 'value': i} for i in fetch_latest_build_names()],
-                                  value=['US'],
-                                  multi=True
-                                  )]),
+            multi=True
+
+        ),
+        html.Div(id='dd-output-bazel-build-names-container')
+    ]),
 
     html.Div(children='''
     A Graph That Compares 2 Chosen Builds.
@@ -98,3 +105,28 @@ bazel_stats_layout = html.Div(children=[
     ),
 
 ])
+
+
+@app.callback(
+    dash.dependencies.Output('dd-output-bazel-build-names-container', 'children'),
+    [dash.dependencies.Input('dd-output-bazel-build-names-container-dropdown', 'value')])
+def update_graph(value):
+    print(value[0])
+
+    print(body2)
+
+    body2['listOfBuildNames'] = value;
+    print(body2)
+
+
+
+    json = requests.post("http://localhost:8081/bazel-stats/build",json=body2, headers=headers).json()
+    print(json)
+    res = dict()
+
+    for select_value in value:
+        res[select_value] = dict()
+
+    print(res)
+
+    return 'You have selected "{}"'.format(value)
