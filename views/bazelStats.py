@@ -37,7 +37,7 @@ def fetch_latest_build_names():
     build_names_json = requests.get("http://localhost:8081/bazel-stats/build-names/3").json()
     build_names_list = []
     for build in build_names_json:
-        build_names_list.insert(0,build['buildName'])
+        build_names_list.insert(0, build['buildName'])
 
     return pd.DataFrame(build_names_list, columns=['name']).name.unique()
 
@@ -49,12 +49,12 @@ def parse_data(json_data):
     for key in json_data.keys():
         for obj in json_data[key]["payload"]:
             res[key][obj["name"]] = obj["time"]
+    # print(res)
     return res
 
 
 def compare_data(json_data):
     json_data2 = fetch_data_last_n_bazel_stats("http://localhost:8081/bazel-stats/2")
-
 
     return parse_data(json_data)
 
@@ -78,15 +78,14 @@ bazel_stats_layout = html.Div(children=[
         figure=fig
     ),
 
-
     html.Div([html.P()
-                   , html.H5('Latest Bazel Builds')
-                   , dcc.Dropdown(id='country-drop'
-                                  , options=[
+                 , html.H5('Latest Bazel Builds')
+                 , dcc.Dropdown(id='country-drop'
+                                , options=[
                 {'label': i, 'value': i} for i in fetch_latest_build_names()],
-                                  value=['US'],
-                                  multi=True
-                                  )]),
+                                value=['US'],
+                                multi=True
+                                )]),
 
     html.Div(children='''
     A Graph That Compares 2 Chosen Builds.

@@ -6,25 +6,33 @@ import dash_table
 import requests
 from app import app
 from dash.dependencies import Input, Output
+import pandas as pd
+
+
+def parse_data(json_data):
+    res = dict()
+    for key in json_data.keys():
+        res[key] = dict()
+        # print(key)
+    for key in json_data.keys():
+        for obj in json_data[key]:
+            if obj != "build-name":
+                # print(type(json_data[key][obj]))
+                res[key][obj] = json_data[key][obj]
+    # print(res)
+    return res
+
+
+# parse_data(fetch_data_aggregation(agg_request_url))
+
 
 labels = ["error", "performance", "portability", "style", "warning"]
-
-dummy_data = [
-    {"id": 1, "buildName": "test", "error": 10, "performance": 43, "portability": 33, "style": 16, "warning": 55},
-    {"id": 2, "buildName": "test2", "error": 13, "performance": 55, "portability": 45, "style": 17, "warning": 55},
-    {"id": 3, "buildName": "test3", "error": 23, "performance": 42, "portability": 43, "style": 71, "warning": 39},
-    {"id": 4, "buildName": "test4", "error": 43, "performance": 96, "portability": 10, "style": 17, "warning": 19},
-    {"id": 5, "buildName": "test5", "error": 45, "performance": 44, "portability": 25, "style": 71, "warning": 49}
-]
 
 
 def fetch_data(request):
     check_request = requests.get(request)
     json_data = check_request.json()
     return json_data
-
-
-# print(fetch_data(request_url))
 
 
 def parse_response(payload):
@@ -43,7 +51,6 @@ def parse_response(payload):
 
 
 cpp_check_layout = [html.Div([html.H3("Statistics on the latest cppChecks"),
-                              # html.Button("Refresh", id="button", n_clicks=0),
                               dcc.Input(id="input", type="number", placeholder="Enter Limit"),
                               html.Div(id="number-out"),
                               dbc.Button(
@@ -56,30 +63,38 @@ cpp_check_layout = [html.Div([html.H3("Statistics on the latest cppChecks"),
                                   figure={},
                                   id='graph'
                               ),
-                              dash_table.DataTable(
-                                  id='table',
-                                  columns=[{"name": key, "id": key} for key in labels],
-                                  data=dummy_data,
-                                  style_header={
-                                      'backgroundColor': 'rgb(230, 230, 230)',
-                                      'fontWeight': 'bold'
-                                  },
+                              html.H3("Aggregation of the last cppChecks"),
+                              dcc.Input(id="bar-input", value=2, type="number", placeholder="Enter Aggregation Size"),
+                              html.Div(id="bar-number-out"),
+                              dcc.Graph(
+                                  id='Aggregation-Graph',
+                                  figure={}
                               ),
-                              html.Label('Please select one on more aggregations'),
-                              dcc.Dropdown(
-                                  id="aggregations_dropdown",
-                                  options=[
-                                      {'label': 'Sum', 'value': 'sum'},
-                                      {'label': 'Min', 'value': 'min'},
-                                      {'label': 'Max', 'value': 'max'},
-                                      {'label': 'Average', 'value': 'prod'}
-                                  ],
-                                  placeholder="Select one or many aggregations",
-                                  multi=True
-                              ),
-                              html.Div(id='dd-output-container'),
-                              dbc.Button("Primary", id="Primary", color="primary", className="mr-1"),
                               ])]
+
+
+@app.callback(
+    Output("Aggregation-Graph", "figure"),
+    Input("bar-input", "value")
+)
+def bar_render(number):
+    agg_request_url = "http://localhost:8081/cppcheck/agg"
+    if number is None:
+        number = 2
+    aggregation_size = int(number)
+    # print(type(number))
+    aggregation_type = [
+        "sum", "avg", "max", "min"
+    ]
+    body = {
+        "aggregationSize": int(aggregation_size),
+        "aggregations": aggregation_type
+    }
+    headers = {'Content-type': 'application/json', 'Accept': 'application/json'}
+    aggregation_request = requests.post(agg_request_url, json=body, headers=headers)
+    json_data = aggregation_request.json()
+    fig1 = px.bar(pd.DataFrame.from_dict(parse_data(json_data)), barmode="group")
+    return fig1
 
 
 @app.callback(
@@ -96,8 +111,6 @@ def number_render(number):
     Input('button', 'n_clicks')
 )
 def graph_render(number, n_clicks):
-    # return "input: {}".format(number)
-
     if number:
         request_url = "http://localhost:8081/cppcheck/last/{n}?n=" + str(number)
     else:
