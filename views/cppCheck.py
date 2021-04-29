@@ -3,19 +3,29 @@ import dash_core_components as dcc
 import dash_bootstrap_components as dbc
 import plotly.express as px
 import dash_table
-import pandas as pd
+import requests
 from app import app
 import dash
 
 labels = ["error", "performance", "portability", "style", "warning"]
 
 dummy_data = [
-    {"error": 10, "performance": 43, "portability": 33, "style": 16, "warning": 55},
-    {"error": 13, "performance": 55, "portability": 45, "style": 17, "warning": 55},
-    {"error": 23, "performance": 42, "portability": 43, "style": 71, "warning": 39},
-    {"error": 43, "performance": 96, "portability": 10, "style": 17, "warning": 19},
-    {"error": 45, "performance": 44, "portability": 25, "style": 71, "warning": 49}
+    {"id": 1, "buildName": "test", "error": 10, "performance": 43, "portability": 33, "style": 16, "warning": 55},
+    {"id": 2, "buildName": "test2", "error": 13, "performance": 55, "portability": 45, "style": 17, "warning": 55},
+    {"id": 3, "buildName": "test3", "error": 23, "performance": 42, "portability": 43, "style": 71, "warning": 39},
+    {"id": 4, "buildName": "test4", "error": 43, "performance": 96, "portability": 10, "style": 17, "warning": 19},
+    {"id": 5, "buildName": "test5", "error": 45, "performance": 44, "portability": 25, "style": 71, "warning": 49}
 ]
+request_url = "http://localhost:8081/cppcheck"
+
+
+def fetch_data(request):
+    check_request = requests.get(request)
+    json_data = check_request.json()
+    return json_data
+
+
+print(fetch_data(request_url))
 
 
 def parse_response(payload):
@@ -25,14 +35,15 @@ def parse_response(payload):
         res[key] = list()
     for elt in payload:
         for key in elt:
-            res[key].append(elt[key])
-    for i in range(1, 6):
-        var = res["Builds"].append("build" + str(i))
+            if key in labels:
+                res[key].append(elt[key])
+            elif key == "buildName":
+                res["Builds"].append(elt[key])
     print(res)
     return res
 
 
-df = parse_response(dummy_data)
+df = parse_response(fetch_data(request_url))
 fig = px.line(df, x="Builds", y=labels, height=800, title="CppCheck Data")
 fig.update_traces(mode='markers+lines')
 fig.update_layout(
