@@ -16,7 +16,6 @@ dummy_data = [
     {"id": 4, "buildName": "test4", "error": 43, "performance": 96, "portability": 10, "style": 17, "warning": 19},
     {"id": 5, "buildName": "test5", "error": 45, "performance": 44, "portability": 25, "style": 71, "warning": 49}
 ]
-request_url = "http://localhost:8081/cppcheck"
 
 
 def fetch_data(request):
@@ -25,7 +24,7 @@ def fetch_data(request):
     return json_data
 
 
-print(fetch_data(request_url))
+# print(fetch_data(request_url))
 
 
 def parse_response(payload):
@@ -39,12 +38,14 @@ def parse_response(payload):
                 res[key].append(elt[key])
             elif key == "buildName":
                 res["Builds"].append(elt[key])
-    print(res)
+    # print(res)
     return res
 
 
 cpp_check_layout = [html.Div([html.H3("Statistics on the latest cppChecks"),
                               # html.Button("Refresh", id="button", n_clicks=0),
+                              dcc.Input(id="input", type="number", placeholder="Enter Limit"),
+                              html.Div(id="number-out"),
                               dbc.Button(
                                   "Refresh",
                                   id="button",
@@ -81,9 +82,26 @@ cpp_check_layout = [html.Div([html.H3("Statistics on the latest cppChecks"),
                               ])]
 
 
-@app.callback(Output('graph', 'figure'), [Input('button', 'n_clicks')])
-def update_chart(n_clicks):
-    print("Clicked")
+@app.callback(
+    Output("number-out", "children"),
+    Input("input", "value")
+)
+def number_render(number):
+    return "input: {}".format(number)
+
+
+@app.callback(
+    Output("graph", "figure"),
+    Input("input", "value"),
+    Input('button', 'n_clicks')
+)
+def graph_render(number, n_clicks):
+    # return "input: {}".format(number)
+
+    if number:
+        request_url = "http://localhost:8081/cppcheck/last/{n}?n=" + str(number)
+    else:
+        request_url = "http://localhost:8081/cppcheck"
     df = parse_response(fetch_data(request_url))
     fig = px.line(df, x="Builds", y=labels, height=800, title="CppCheck Data")
     fig.update_traces(mode='markers+lines')
@@ -103,9 +121,3 @@ def update_chart(n_clicks):
         ),
     )
     return fig
-
-# @app.callback(
-#     dash.dependencies.Output('dd-output-container', 'children'),
-#     [dash.dependencies.Input('aggregations_dropdown', 'value')])
-# def update_output(value):
-#     return 'You have selected "{}"'.format(value)
