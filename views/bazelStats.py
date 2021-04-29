@@ -27,6 +27,12 @@ body2 = {
     "listOfBuildNames": []
 }
 
+comparator_graph = {
+    'Jean': {'total_launch_phase_time': 0.0146, 'total_init_phase_time': 0.155, 'total_loading_phase_time': 0.301,
+             'total_analysis_phase_time': 0.011, 'total_preparation_phase_time': 0.001,
+             'total_execution_phase_time': 0.025,
+             'total_finish_phase_time': 0.001, 'total_run_time': 0.142}}
+
 
 def fetch_data_aggregation(request):
     aggregation_request = requests.post(request, json=body, headers=headers)
@@ -42,6 +48,7 @@ def fetch_data_last_n_bazel_stats(request):
 
 def fetch_latest_build_names():
     build_names_json = requests.get("http://localhost:8081/bazel-stats/build-names/10").json()
+    print(build_names_json)
     build_names_list = []
     for build in build_names_json:
         build_names_list.insert(0, build['buildName'])
@@ -59,17 +66,27 @@ def parse_data(json_data):
     return res
 
 
-def compare_data(json_data):
-    json_data2 = fetch_data_last_n_bazel_stats("http://localhost:8081/bazel-stats/2")
+def compare_data(value):
+    print(value)
+    json = requests.post("http://localhost:8081/bazel-stats/build", json=body2, headers=headers).json()
 
-    return parse_data(json_data)
+    res = dict()
+
+    for select_value in value:
+        res[select_value] = dict()
+
+    for build_stats in json:
+        for type_of_stats in build_stats['payload']:
+            res[build_stats['build_name']][type_of_stats['name']] = type_of_stats['time']
+    print("--------------------------")
+    print(res)
+    return px.bar(pd.DataFrame.from_dict(res), barmode="group")
 
 
 fig = px.bar(pd.DataFrame.from_dict(parse_data(fetch_data_aggregation(agg_request_url))), barmode="group")
 
-fig2 = px.bar(pd.DataFrame.from_dict(compare_data(fetch_data_aggregation(agg_request_url))), barmode="group")
-
 dropdown = fetch_latest_build_names()
+fig2 = px.bar(pd.DataFrame.from_dict(comparator_graph), barmode="group")
 
 bazel_stats_layout = html.Div(children=[
 
@@ -87,46 +104,23 @@ bazel_stats_layout = html.Div(children=[
     html.Div([
         dcc.Dropdown(
             id='dd-output-bazel-build-names-container-dropdown',
-            options=[
-                {'label': i, 'value': i} for i in fetch_latest_build_names()],
+            options=[{'label': i, 'value': i} for i in fetch_latest_build_names()],
             multi=True
 
         ),
-        html.Div(id='dd-output-bazel-build-names-container')
+        html.Div(id='dd-output-bazel-build-names-container'),
+        dcc.Graph(
+            id='Comparator-Graph',
+            figure={}
+        ),
     ]),
-
-    html.Div(children='''
-    A Graph That Compares 2 Chosen Builds.
-    '''),
-
-    dcc.Graph(
-        id='Comparator Graph',
-        figure=fig2
-    ),
 
 ])
 
 
 @app.callback(
-    dash.dependencies.Output('dd-output-bazel-build-names-container', 'children'),
+    dash.dependencies.Output('Comparator-Graph', 'figure'),
     [dash.dependencies.Input('dd-output-bazel-build-names-container-dropdown', 'value')])
 def update_graph(value):
-    print(value[0])
-
-    print(body2)
-
     body2['listOfBuildNames'] = value;
-    print(body2)
-
-
-
-    json = requests.post("http://localhost:8081/bazel-stats/build",json=body2, headers=headers).json()
-    print(json)
-    res = dict()
-
-    for select_value in value:
-        res[select_value] = dict()
-
-    print(res)
-
-    return 'You have selected "{}"'.format(value)
+    return compare_data(value)
