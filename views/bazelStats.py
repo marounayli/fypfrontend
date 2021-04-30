@@ -66,6 +66,7 @@ def parse_data_for_comparison(value):
     for build_stats in comparison_data:
         for type_of_stats in build_stats['payload']:
             res[build_stats['build_name']][type_of_stats['name']] = type_of_stats['time']
+    print(res)
     return px.bar(pd.DataFrame.from_dict(res), barmode="group")
 
 

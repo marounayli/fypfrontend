@@ -2,11 +2,50 @@ import dash_html_components as html
 import dash_core_components as dcc
 import dash_bootstrap_components as dbc
 import plotly.express as px
-import dash_table
 import requests
 from app import app
 from dash.dependencies import Input, Output
 import pandas as pd
+
+labels = ["error", "performance", "portability", "style", "warning"]
+
+
+def fetch_latest_build():
+    request = "http://localhost:8081/cppcheck/build-names/last/10"
+    build_names_json = requests.get(request).json()
+    return build_names_json
+
+
+def parse_data_for_comparison(value):
+    if value is None or len(value) == 0:
+        return {}
+    request = "http://localhost:8081/cppcheck/build-names"
+    headers = {'Content-type': 'application/json', 'Accept': 'application/json'}
+    data = requests.post(request, json={"buildNames": value}, headers=headers)
+    comparison_data = data.json()
+    res = dict()
+
+    for select_value in value:
+        res[select_value] = dict()
+
+    for data in comparison_data:
+        print(data)
+        for type_of_data in data:
+            if type_of_data != 'buildName':
+                res[data['buildName']][type_of_data] = data[type_of_data]
+    return px.bar(pd.DataFrame.from_dict(res), barmode="group")
+
+
+def fetch_data_aggregation(request, body, headers):
+    aggregation_request = requests.post(request, json=body, headers=headers)
+    json_data = aggregation_request.json()
+    return json_data
+
+
+def fetch_data(request):
+    check_request = requests.get(request)
+    json_data = check_request.json()
+    return json_data
 
 
 def parse_data(json_data):
@@ -17,22 +56,9 @@ def parse_data(json_data):
     for key in json_data.keys():
         for obj in json_data[key]:
             if obj != "build-name":
-                # print(type(json_data[key][obj]))
                 res[key][obj] = json_data[key][obj]
     # print(res)
     return res
-
-
-# parse_data(fetch_data_aggregation(agg_request_url))
-
-
-labels = ["error", "performance", "portability", "style", "warning"]
-
-
-def fetch_data(request):
-    check_request = requests.get(request)
-    json_data = check_request.json()
-    return json_data
 
 
 def parse_response(payload):
@@ -70,7 +96,32 @@ cpp_check_layout = [html.Div([html.H3("Statistics on the latest cppChecks"),
                                   id='Aggregation-Graph',
                                   figure={}
                               ),
+                              dcc.Dropdown(
+                                  id='dd-output-cpp-build-names-container-dropdown',
+                                  options=[],
+                                  value=fetch_latest_build(),
+                                  multi=True
+                              ),
+                              dbc.Button(
+                                  "Refresh",
+                                  id="button",
+                                  className="mb-3 order-button",
+                                  color="primary",
+                              ),
+                              html.Div(id='dd-output-cpp-build-names-container'),
+                              dcc.Graph(
+                                  id='ComparatorGraph',
+                                  figure={}
+                              ),
                               ])]
+
+
+@app.callback(
+    Output('ComparatorGraph', 'figure'),
+    Input('dd-output-cpp-build-names-container-dropdown', 'value')
+)
+def update_graph(value):
+    return parse_data_for_comparison(value)
 
 
 @app.callback(
@@ -91,9 +142,8 @@ def bar_render(number):
         "aggregations": aggregation_type
     }
     headers = {'Content-type': 'application/json', 'Accept': 'application/json'}
-    aggregation_request = requests.post(agg_request_url, json=body, headers=headers)
-    json_data = aggregation_request.json()
-    fig1 = px.bar(pd.DataFrame.from_dict(parse_data(json_data)), barmode="group")
+    fig1 = px.bar(pd.DataFrame.from_dict(parse_data(fetch_data_aggregation(agg_request_url, body, headers))),
+                  barmode="group")
     return fig1
 
 
@@ -134,3 +184,10 @@ def graph_render(number, n_clicks):
         ),
     )
     return fig
+
+
+@app.callback(
+    Output('dd-output-cpp-build-names-container-dropdown', 'options'),
+    Input('button', 'n_clicks'))
+def update_comp_graph(n_clicks):
+    return [{'label': i, 'value': i} for i in fetch_latest_build()]
