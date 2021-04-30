@@ -4,6 +4,7 @@ import pandas as pd
 import plotly.express as px
 import requests
 import dash
+import dash_bootstrap_components as dbc
 
 from app import app
 
@@ -12,12 +13,6 @@ base_url = "http://localhost:8081/bazel-stats/"
 body2 = {
     "listOfBuildNames": []
 }
-
-comparator_graph = {
-    'Jean': {'total_launch_phase_time': 0.0146, 'total_init_phase_time': 0.155, 'total_loading_phase_time': 0.301,
-             'total_analysis_phase_time': 0.011, 'total_preparation_phase_time': 0.001,
-             'total_execution_phase_time': 0.025,
-             'total_finish_phase_time': 0.001, 'total_run_time': 0.142}}
 
 
 def request_generator(request_type, path, request_body):
@@ -60,6 +55,8 @@ def parse_data_for_aggregation(json_data):
 
 
 def parse_data_for_comparison(value):
+    if value is None or len(value) == 0:
+        return {}
     comparison_data = request_generator(request_type="post", path="/build", request_body={"listOfBuildNames": value})
     res = dict()
 
@@ -69,11 +66,11 @@ def parse_data_for_comparison(value):
     for build_stats in comparison_data:
         for type_of_stats in build_stats['payload']:
             res[build_stats['build_name']][type_of_stats['name']] = type_of_stats['time']
+    print(res)
     return px.bar(pd.DataFrame.from_dict(res), barmode="group")
 
 
 fig = px.bar(pd.DataFrame.from_dict(parse_data_for_aggregation(fetch_data_aggregation())), barmode="group")
-
 
 bazel_stats_layout = html.Div(children=[
 
@@ -91,10 +88,17 @@ bazel_stats_layout = html.Div(children=[
     html.Div([
         dcc.Dropdown(
             id='dd-output-bazel-build-names-container-dropdown',
-            options=[{'label': i, 'value': i} for i in fetch_latest_build_names()],
+            options=[],
             multi=True
 
         ),
+        dbc.Button(
+            "Refresh",
+            id="button",
+            className="mb-3 order-button",
+            color="primary",
+        ),
+
         html.Div(id='dd-output-bazel-build-names-container'),
         dcc.Graph(
             id='Comparator-Graph',
@@ -110,3 +114,10 @@ bazel_stats_layout = html.Div(children=[
     [dash.dependencies.Input('dd-output-bazel-build-names-container-dropdown', 'value')])
 def update_graph(value):
     return parse_data_for_comparison(value)
+
+
+@app.callback(
+    dash.dependencies.Output('dd-output-bazel-build-names-container-dropdown', 'options'),
+    [dash.dependencies.Input('button', 'n_clicks')])
+def update_graph(n_clicks):
+    return [{'label': i, 'value': i} for i in fetch_latest_build_names()]
