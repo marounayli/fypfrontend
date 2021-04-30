@@ -7,21 +7,7 @@ import dash
 
 from app import app
 
-agg_request_url = "http://localhost:8081/bazel-stats/agg"
-aggregationSize = 2
-aggregationType = [
-    "sum", "avg", "max", "min"
-]
-body = {
-    "aggregationSize": aggregationSize,
-    "aggregations": aggregationType
-}
-headers = {'Content-type': 'application/json', 'Accept': 'application/json'}
-
-df = pd.DataFrame({
-    "country": ["2011", "2012", "2013", "2014", "2015", "2016"],
-
-})
+base_url = "http://localhost:8081/bazel-stats/"
 
 body2 = {
     "listOfBuildNames": []
@@ -34,21 +20,28 @@ comparator_graph = {
              'total_finish_phase_time': 0.001, 'total_run_time': 0.142}}
 
 
-def fetch_data_aggregation(request):
-    aggregation_request = requests.post(request, json=body, headers=headers)
-    json_data = aggregation_request.json()
-    return json_data
+def request_generator(request_type, path, request_body):
+    if request_type == "post":
+        response = requests.post(base_url + path, json=request_body).json()
+    else:
+        response = requests.get(base_url + path).json()
+
+    return response
 
 
-def fetch_data_last_n_bazel_stats(request):
-    aggregation_request = requests.get(request)
-    json_data = aggregation_request.json()
-    return json_data
+def fetch_data_aggregation():
+    aggregation_data = request_generator(request_type="post", path="/agg", request_body={
+        "aggregationSize": 2,
+        "aggregations": [
+            "sum", "avg", "max", "min"
+        ]
+    })
+    return aggregation_data
 
 
 def fetch_latest_build_names():
-    build_names_json = requests.get("http://localhost:8081/bazel-stats/build-names/10").json()
-    print(build_names_json)
+    ## TODO: you might need to make a button for fetch the latest N builds and limit them from the UI
+    build_names_json = request_generator("get", "/build-names/10", None)
     build_names_list = []
     for build in build_names_json:
         build_names_list.insert(0, build['buildName'])
@@ -56,7 +49,7 @@ def fetch_latest_build_names():
     return pd.DataFrame(build_names_list, columns=['name']).name.unique()
 
 
-def parse_data(json_data):
+def parse_data_for_aggregation(json_data):
     res = dict()
     for key in json_data.keys():
         res[key] = dict()
@@ -66,27 +59,21 @@ def parse_data(json_data):
     return res
 
 
-def compare_data(value):
-    print(value)
-    json = requests.post("http://localhost:8081/bazel-stats/build", json=body2, headers=headers).json()
-
+def parse_data_for_comparison(value):
+    comparison_data = request_generator(request_type="post", path="/build", request_body={"listOfBuildNames": value})
     res = dict()
 
     for select_value in value:
         res[select_value] = dict()
 
-    for build_stats in json:
+    for build_stats in comparison_data:
         for type_of_stats in build_stats['payload']:
             res[build_stats['build_name']][type_of_stats['name']] = type_of_stats['time']
-    print("--------------------------")
-    print(res)
     return px.bar(pd.DataFrame.from_dict(res), barmode="group")
 
 
-fig = px.bar(pd.DataFrame.from_dict(parse_data(fetch_data_aggregation(agg_request_url))), barmode="group")
+fig = px.bar(pd.DataFrame.from_dict(parse_data_for_aggregation(fetch_data_aggregation())), barmode="group")
 
-dropdown = fetch_latest_build_names()
-fig2 = px.bar(pd.DataFrame.from_dict(comparator_graph), barmode="group")
 
 bazel_stats_layout = html.Div(children=[
 
@@ -122,5 +109,4 @@ bazel_stats_layout = html.Div(children=[
     dash.dependencies.Output('Comparator-Graph', 'figure'),
     [dash.dependencies.Input('dd-output-bazel-build-names-container-dropdown', 'value')])
 def update_graph(value):
-    body2['listOfBuildNames'] = value;
-    return compare_data(value)
+    return parse_data_for_comparison(value)
