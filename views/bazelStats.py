@@ -21,11 +21,9 @@ def request_generator(request_type, path, request_body):
     return response
 
 
-# Return an aggregation of a given number of bazel stats aggregation.
-# TODO: Ability for the User to select the Aggregation Size Himself
-def fetch_data_aggregation():
+def fetch_data_aggregation(size):
     aggregation_data = request_generator(request_type="post", path="/agg", request_body={
-        "aggregationSize": 2,
+        "aggregationSize": size,
         "aggregations": [
             "sum", "avg", "max", "min"
         ]
@@ -73,10 +71,6 @@ def parse_data_for_comparison(value):
     return px.bar(pd.DataFrame.from_dict(res), barmode="group")
 
 
-# fetch data of aggregation
-# TODO: Reactive Form Linked with a button that specify the Aggregation Size
-fig = px.bar(pd.DataFrame.from_dict(parse_data_for_aggregation(fetch_data_aggregation())), barmode="group")
-
 bazel_stats_layout = html.Div(children=[
 
     html.H1(children='Bazel Stats'),
@@ -85,9 +79,10 @@ bazel_stats_layout = html.Div(children=[
         A Graph That Represents The Aggregation Of The Last N Bazel Builds.
     '''),
 
+    dcc.Input(id="bazel-stats-agg-input", value=2, type="number", placeholder="Enter Bazel Stats Aggregation Size", min=2),
     dcc.Graph(
-        id='Aggregation Graph',
-        figure=fig
+        id='Bazel-Stats-Aggregation-Graph',
+        figure={}
     ),
 
     html.Div([
@@ -122,9 +117,21 @@ bazel_stats_layout = html.Div(children=[
 def update_graph(value):
     return parse_data_for_comparison(value)
 
+
 # On Refresh, the list will fetch any new bazel builds generated.
 @app.callback(
     dash.dependencies.Output('dd-output-bazel-build-names-container-dropdown', 'options'),
     [dash.dependencies.Input('bazel-stats-refresh-btn', 'n_clicks')])
 def update_graph(n_clicks):
     return [{'label': i, 'value': i} for i in fetch_latest_build_names()]
+
+# Update the aggregation graph based on the size provided by the input box
+@app.callback(
+    dash.dependencies.Output("Bazel-Stats-Aggregation-Graph", "figure"),
+    dash.dependencies.Input("bazel-stats-agg-input", "value")
+)
+def bazel_stats_aggregation_graph_update(number):
+    if number is None:
+        number = 2
+    aggregation_data = fetch_data_aggregation(number)
+    return px.bar(pd.DataFrame.from_dict(parse_data_for_aggregation(aggregation_data)), barmode="group")
