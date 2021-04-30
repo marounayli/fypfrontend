@@ -79,12 +79,6 @@ def parse_response(payload):
 cpp_check_layout = [html.Div([html.H3("Statistics on the latest cppChecks"),
                               dcc.Input(id="input", type="number", placeholder="Enter Limit"),
                               html.Div(id="number-out"),
-                              dbc.Button(
-                                  "Refresh",
-                                  id="button",
-                                  className="mb-3 order-button",
-                                  color="primary",
-                              ),
                               dcc.Graph(
                                   figure={},
                                   id='graph'
