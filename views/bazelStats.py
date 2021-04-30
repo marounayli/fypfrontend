@@ -33,13 +33,14 @@ def fetch_data_aggregation(size):
 
 # fetch a list of the latest 10 bazel-builds objects for the dropdown list to be selected for stats comparison.
 # TODO: you might need to make a button for fetch the latest N builds and limit them from the UI
-def fetch_latest_build_names():
-    build_names_json = request_generator("get", "/build-names/10", None)
+def fetch_latest_build_names(size):
+    build_names_json = request_generator("get", "/build-names/{}".format(size), None)
     build_names_list = []
-    for build in build_names_json:
+    for build in reversed(build_names_json):
         build_names_list.insert(0, build['buildName'])
 
-    return pd.DataFrame(build_names_list, columns=['name']).name.unique()
+    data = pd.DataFrame(build_names_list, columns=['name']).name.unique()
+    return data
 
 
 def parse_data_for_aggregation(json_data):
@@ -67,7 +68,6 @@ def parse_data_for_comparison(value):
         for type_of_stats in build_stats['payload']:
             res[build_stats['build_name']][type_of_stats['name']] = type_of_stats['time']
 
-    # update graph with new data.
     return px.bar(pd.DataFrame.from_dict(res), barmode="group")
 
 
@@ -79,7 +79,8 @@ bazel_stats_layout = html.Div(children=[
         A Graph That Represents The Aggregation Of The Last N Bazel Builds.
     '''),
 
-    dcc.Input(id="bazel-stats-agg-input", value=2, type="number", placeholder="Enter Bazel Stats Aggregation Size", min=2),
+    dcc.Input(id="bazel-stats-agg-input", value=2, type="number", placeholder="Enter Bazel Stats Aggregation Size",
+              min=2),
     dcc.Graph(
         id='Bazel-Stats-Aggregation-Graph',
         figure={}
@@ -88,8 +89,9 @@ bazel_stats_layout = html.Div(children=[
     html.Div([
         dcc.Dropdown(
             id='dd-output-bazel-build-names-container-dropdown',
+            value= fetch_latest_build_names(1),
             options=[],
-            multi=True
+            multi=True,
 
         ),
         dbc.Button(
@@ -98,11 +100,10 @@ bazel_stats_layout = html.Div(children=[
             className="mb-3 order-button",
             color="primary",
         ),
-
         html.Div(id='dd-output-bazel-build-names-container'),
         dcc.Graph(
             id='Comparator-Graph',
-            figure={}
+            figure={},
         ),
     ]),
 
@@ -123,7 +124,8 @@ def update_graph(value):
     dash.dependencies.Output('dd-output-bazel-build-names-container-dropdown', 'options'),
     [dash.dependencies.Input('bazel-stats-refresh-btn', 'n_clicks')])
 def update_graph(n_clicks):
-    return [{'label': i, 'value': i} for i in fetch_latest_build_names()]
+    return [{'label': i, 'value': i} for i in fetch_latest_build_names(10)]
+
 
 # Update the aggregation graph based on the size provided by the input box
 @app.callback(
