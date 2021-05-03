@@ -8,44 +8,42 @@ from dash.dependencies import Input, Output
 import pandas as pd
 
 labels = ["error", "performance", "portability", "style", "warning"]
+base_url = "http://localhost:8081/cppcheck/"
 
 
+# Generate request based on request_type, custom endpoint path, and a request body using a base_url
+def request_generator(request_type, path, request_body):
+    if request_type == "post":
+        response = requests.post(base_url + path, json=request_body)
+    else:
+        response = requests.get(base_url + path)
+
+    return response.json()
+
+
+# API call to get the last 10 builds names
 def fetch_latest_build():
-    request = "http://localhost:8081/cppcheck/build-names/last/10"
-    build_names_json = requests.get(request).json()
-    return build_names_json
+    return request_generator("get", "build-names/last/10", None)
 
 
+# Create a dictionary representing the data for the bar graph
 def parse_data_for_comparison(value):
+    # To avoid returning a dic of null
     if value is None or len(value) == 0:
         return {}
-    request = "http://localhost:8081/cppcheck/build-names"
-    headers = {'Content-type': 'application/json', 'Accept': 'application/json'}
-    data = requests.post(request, json={"buildNames": value}, headers=headers)
-    comparison_data = data.json()
-    res = dict()
+    # API call to get build stats for specific build names fetched from the dropdown
+    comparison_data = request_generator("post", "build-names", {"buildNames": value})
 
+    res = dict()
     for select_value in value:
         res[select_value] = dict()
-
+    # fetch stats and fill the res dictionary with relevant info
     for data in comparison_data:
-        print(data)
         for type_of_data in data:
             if type_of_data != 'buildName':
                 res[data['buildName']][type_of_data] = data[type_of_data]
-    return px.bar(pd.DataFrame.from_dict(res), barmode="group")
-
-
-def fetch_data_aggregation(request, body, headers):
-    aggregation_request = requests.post(request, json=body, headers=headers)
-    json_data = aggregation_request.json()
-    return json_data
-
-
-def fetch_data(request):
-    check_request = requests.get(request)
-    json_data = check_request.json()
-    return json_data
+    # return the data to visualize on the graph
+    return px.bar(pd.DataFrame.from_dict(res), barmode="group", template="presentation")
 
 
 def parse_data(json_data):
@@ -123,7 +121,6 @@ def update_graph(value):
     Input("bar-input", "value")
 )
 def bar_render(number):
-    agg_request_url = "http://localhost:8081/cppcheck/agg"
     if number is None:
         number = 2
     aggregation_size = int(number)
@@ -135,18 +132,9 @@ def bar_render(number):
         "aggregationSize": int(aggregation_size),
         "aggregations": aggregation_type
     }
-    headers = {'Content-type': 'application/json', 'Accept': 'application/json'}
-    fig1 = px.bar(pd.DataFrame.from_dict(parse_data(fetch_data_aggregation(agg_request_url, body, headers))),
-                  barmode="group")
+    fig1 = px.bar(pd.DataFrame.from_dict(parse_data(request_generator("post", "agg", body))),
+                  barmode="group", template="presentation")
     return fig1
-
-
-@app.callback(
-    Output("number-out", "children"),
-    Input("input", "value")
-)
-def number_render(number):
-    return "input: {}".format(number)
 
 
 @app.callback(
@@ -156,27 +144,12 @@ def number_render(number):
 )
 def graph_render(number, n_clicks):
     if number:
-        request_url = "http://localhost:8081/cppcheck/last/{n}?n=" + str(number)
+        request_url = "last/{n}?n=" + str(number)
     else:
-        request_url = "http://localhost:8081/cppcheck"
-    df = parse_response(fetch_data(request_url))
-    fig = px.line(df, x="Builds", y=labels, height=800, title="CppCheck Data")
+        request_url = ""
+    df = parse_response(request_generator("get", request_url, None))
+    fig = px.line(df, x="Builds", y=labels, height=800, title="CppCheck Data", template="presentation")
     fig.update_traces(mode='markers+lines')
-    fig.update_layout(
-        paper_bgcolor="LightSteelBlue",
-        xaxis=dict(
-            showline=True,
-            showgrid=True,
-            showticklabels=True,
-            linewidth=2,
-            ticks='outside',
-            tickfont=dict(
-                family='Arial',
-                size=12,
-                color='rgb(82, 82, 82)',
-            ),
-        ),
-    )
     return fig
 
 
