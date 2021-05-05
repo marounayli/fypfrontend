@@ -3,6 +3,7 @@ import dash_html_components as html
 import pandas as pd
 import plotly.express as px
 import requests
+from datetime import datetime
 import dash
 import dash_bootstrap_components as dbc
 
@@ -87,13 +88,19 @@ bazel_stats_layout = html.Div(children=[
     ),
 
     html.Div([
+        dcc.Interval(
+            id='interval-component',
+            interval=1 * 10000,  # in milliseconds
+            n_intervals=0
+        ),
         dcc.Dropdown(
             id='dd-output-bazel-build-names-container-dropdown',
-            value= fetch_latest_build_names(1),
+            value=fetch_latest_build_names(1),
             options=[],
             multi=True,
 
         ),
+
         dbc.Button(
             "Refresh",
             id="bazel-stats-refresh-btn",
@@ -122,8 +129,9 @@ def update_graph(value):
 # On Refresh, the list will fetch any new bazel builds generated.
 @app.callback(
     dash.dependencies.Output('dd-output-bazel-build-names-container-dropdown', 'options'),
-    [dash.dependencies.Input('bazel-stats-refresh-btn', 'n_clicks')])
-def update_graph(n_clicks):
+    dash.dependencies.Input('interval-component', 'n_intervals'))
+def update_graph(n):
+    print('refresh')
     return [{'label': i, 'value': i} for i in fetch_latest_build_names(10)]
 
 
