@@ -22,8 +22,8 @@ def request_generator(request_type, path, request_body):
 
 
 # API call to get the last 10 builds names
-def fetch_latest_build():
-    return request_generator("get", "build-names/last/10", None)
+def fetch_latest_build(size):
+    return request_generator("get", "build-names/last/{}".format(size), None)
 
 
 # Create a dictionary representing the data for the bar graph
@@ -95,7 +95,7 @@ cpp_check_layout = [html.Div([html.H3("Statistics on the latest cppChecks"),
                                             dcc.Dropdown(
                                                 id='my-dropdown',
                                                 options=[],
-                                                value=fetch_latest_build(),
+                                                value=fetch_latest_build(2),
                                                 multi=True
                                             )
                                             ]
@@ -165,7 +165,7 @@ def graph_render(number):
     Input('interval', 'n_intervals'))
 def update_time(n_intervals):
     # print('fetching from api', fetch_latest_build())
-    return fetch_latest_build()
+    return fetch_latest_build(10)
 
 
 @app.callback(

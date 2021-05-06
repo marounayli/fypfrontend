@@ -1,11 +1,10 @@
+import dash
 import dash_core_components as dcc
 import dash_html_components as html
 import pandas as pd
 import plotly.express as px
 import requests
-import dash
-import dash_bootstrap_components as dbc
-
+from dash.dependencies import Input, Output
 from app import app
 
 base_url = "http://localhost:8081/bazel-stats/"
@@ -86,27 +85,27 @@ bazel_stats_layout = html.Div(children=[
         figure={}
     ),
 
-    html.Div([
-        dcc.Dropdown(
-            id='dd-output-bazel-build-names-container-dropdown',
-            value= fetch_latest_build_names(1),
-            options=[],
-            multi=True,
+    html.Div(
+        id='my-dropdown-div-parent-bazel-stats',
+        children=[
+            dcc.Store(id='bazel-stats-data-store'),
+            dcc.Interval(interval=120 * 1000, id='bazel-stats-interval'),
+            dcc.Dropdown(
+                id='bazel-stats-dropdown',
+                value=fetch_latest_build_names(2),
+                options=[],
+                multi=True,
 
-        ),
-        dbc.Button(
-            "Refresh",
-            id="bazel-stats-refresh-btn",
-            className="mb-3 order-button",
-            color="primary",
-        ),
-        html.Div(id='dd-output-bazel-build-names-container'),
-        dcc.Graph(
-            id='Comparator-Graph',
-            figure={},
-        ),
-    ]),
+            )
+        ]
 
+    ),
+
+    html.Div(id='dd-output-bazel-build-names-container'),
+    dcc.Graph(
+        id='Comparator-Graph',
+        figure={},
+    )
 ])
 
 
@@ -114,17 +113,9 @@ bazel_stats_layout = html.Div(children=[
 # The Graph will be updated based on this Selection
 @app.callback(
     dash.dependencies.Output('Comparator-Graph', 'figure'),
-    [dash.dependencies.Input('dd-output-bazel-build-names-container-dropdown', 'value')])
+    [dash.dependencies.Input('bazel-stats-dropdown', 'value')])
 def update_graph(value):
     return parse_data_for_comparison(value)
-
-
-# On Refresh, the list will fetch any new bazel builds generated.
-@app.callback(
-    dash.dependencies.Output('dd-output-bazel-build-names-container-dropdown', 'options'),
-    [dash.dependencies.Input('bazel-stats-refresh-btn', 'n_clicks')])
-def update_graph(n_clicks):
-    return [{'label': i, 'value': i} for i in fetch_latest_build_names(10)]
 
 
 # Update the aggregation graph based on the size provided by the input box
@@ -137,3 +128,23 @@ def bazel_stats_aggregation_graph_update(number):
         number = 2
     aggregation_data = fetch_data_aggregation(number)
     return px.bar(pd.DataFrame.from_dict(parse_data_for_aggregation(aggregation_data)), barmode="group")
+
+
+@app.callback(
+    Output('bazel-stats-data-store', 'data'),
+    Input('bazel-stats-interval', 'n_intervals'))
+def update_time(n_intervals):
+    print('fetching from api', fetch_latest_build_names(20))
+    return fetch_latest_build_names(10)
+
+
+@app.callback(
+        Output('bazel-stats-dropdown', 'options'),
+    [
+        Input('bazel-stats-data-store', 'data'),
+        Input('my-dropdown-div-parent-bazel-stats', 'n_clicks')
+    ])
+def update_comp_graph(data, n_clicks):
+    print('fetching from store', data)
+    if data:
+        return [{'label': i, 'value': i} for i in data]
