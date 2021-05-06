@@ -31,7 +31,6 @@ def fetch_data_aggregation(size):
 
 
 # fetch a list of the latest 10 bazel-builds objects for the dropdown list to be selected for stats comparison.
-# TODO: you might need to make a button for fetch the latest N builds and limit them from the UI
 def fetch_latest_build_names(size):
     build_names_json = request_generator("get", "/build-names/{}".format(size), None)
     build_names_list = []
