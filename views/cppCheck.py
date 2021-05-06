@@ -22,8 +22,8 @@ def request_generator(request_type, path, request_body):
 
 
 # API call to get the last 10 builds names
-def fetch_latest_build():
-    return request_generator("get", "build-names/last/10", None)
+def fetch_latest_build(size):
+    return request_generator("get", "build-names/last/{}".format(size), None)
 
 
 # Create a dictionary representing the data for the bar graph
@@ -88,19 +88,19 @@ cpp_check_layout = [html.Div([html.H3("Statistics on the latest cppChecks"),
                                   id='Aggregation-Graph',
                                   figure={}
                               ),
-                              dcc.Dropdown(
-                                  id='dd-output-cpp-build-names-container-dropdown',
-                                  options=[],
-                                  value=fetch_latest_build(),
-                                  multi=True
+                              html.Div(
+                                  id='my-dropdown-parent',
+                                  children=[dcc.Store(id='data-store'),
+                                            dcc.Interval(interval=120 * 1000, id='interval'),
+                                            dcc.Dropdown(
+                                                id='my-dropdown',
+                                                options=[],
+                                                value=fetch_latest_build(2),
+                                                multi=True
+                                            )
+                                            ]
                               ),
-                              dbc.Button(
-                                  "Refresh",
-                                  id="button",
-                                  className="mb-3 order-button",
-                                  color="primary",
-                              ),
-                              html.Div(id='dd-output-cpp-build-names-container'),
+                              html.Div(id='my-container'),
                               dcc.Graph(
                                   id='ComparatorGraph',
                                   figure={}
@@ -110,9 +110,10 @@ cpp_check_layout = [html.Div([html.H3("Statistics on the latest cppChecks"),
 
 @app.callback(
     Output('ComparatorGraph', 'figure'),
-    Input('dd-output-cpp-build-names-container-dropdown', 'value')
+    Input('my-dropdown', 'value')
 )
 def update_graph(value):
+    # print("test")
     return parse_data_for_comparison(value)
 
 
@@ -140,9 +141,8 @@ def bar_render(number):
 @app.callback(
     Output("graph", "figure"),
     Input("input", "value"),
-    Input('button', 'n_clicks')
 )
-def graph_render(number, n_clicks):
+def graph_render(number):
     if number:
         request_url = "last/{n}?n=" + str(number)
     else:
@@ -153,8 +153,26 @@ def graph_render(number, n_clicks):
     return fig
 
 
+# @app.callback(
+#     Output('my-dropdown', 'options'),
+#     Input('my-dropdown-parent', 'n_clicks'))
+# def update_comp_graph(n_clicks):
+#     return [{'label': i, 'value': i} for i in fetch_latest_build()]
+#
+
 @app.callback(
-    Output('dd-output-cpp-build-names-container-dropdown', 'options'),
-    Input('button', 'n_clicks'))
-def update_comp_graph(n_clicks):
-    return [{'label': i, 'value': i} for i in fetch_latest_build()]
+    Output('data-store', 'data'),
+    Input('interval', 'n_intervals'))
+def update_time(n_intervals):
+    # print('fetching from api', fetch_latest_build())
+    return fetch_latest_build(10)
+
+
+@app.callback(
+    Output('my-dropdown', 'options'),
+    [Input('data-store', 'data'),
+     Input('my-dropdown-parent', 'n_clicks')])
+def update_comp_graph(data, n_clicks):
+    # print('fetching from store', data)
+    if data:
+        return [{'label': i, 'value': i} for i in data]
