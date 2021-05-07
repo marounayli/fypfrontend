@@ -73,38 +73,38 @@ bazel_stats_layout = html.Div(children=[
 
     html.H1(children='Bazel Stats'),
 
-    html.Div(children='''
-        A Graph That Represents The Aggregation Of The Last N Bazel Builds.
-    '''),
-
-    dcc.Input(id="bazel-stats-agg-input", value=2, type="number", placeholder="Enter Bazel Stats Aggregation Size",
-              min=2),
-    dcc.Graph(
-        id='Bazel-Stats-Aggregation-Graph',
-        figure={}
-    ),
-
-    html.Div(
-        id='my-dropdown-div-parent-bazel-stats',
-        children=[
-            dcc.Store(id='bazel-stats-data-store'),
-            dcc.Interval(interval=120 * 1000, id='bazel-stats-interval'),
-            dcc.Dropdown(
-                id='bazel-stats-dropdown',
-                value=fetch_latest_build_names(2),
-                options=[],
-                multi=True,
-
-            )
-        ]
-
-    ),
-
-    html.Div(id='dd-output-bazel-build-names-container'),
-    dcc.Graph(
-        id='Comparator-Graph',
-        figure={},
-    )
+    # html.Div(children='''
+    #     A Graph That Represents The Aggregation Of The Last N Bazel Builds.
+    # '''),
+    #
+    # dcc.Input(id="bazel-stats-agg-input", value=2, type="number", placeholder="Enter Bazel Stats Aggregation Size",
+    #           min=2),
+    # dcc.Graph(
+    #     id='Bazel-Stats-Aggregation-Graph',
+    #     figure={}
+    # ),
+    #
+    # html.Div(
+    #     id='my-dropdown-div-parent-bazel-stats',
+    #     children=[
+    #         dcc.Store(id='bazel-stats-data-store'),
+    #         dcc.Interval(interval=120 * 1000, id='bazel-stats-interval'),
+    #         dcc.Dropdown(
+    #             id='bazel-stats-dropdown',
+    #             value=fetch_latest_build_names(2),
+    #             options=[],
+    #             multi=True,
+    #
+    #         )
+    #     ]
+    #
+    # ),
+    #
+    # html.Div(id='dd-output-bazel-build-names-container'),
+    # dcc.Graph(
+    #     id='Comparator-Graph',
+    #     figure={},
+    # )
 ])
 
 
