@@ -21,12 +21,13 @@ def request_generator(request_type, url, request_body):
 
 
 def fetch_data_aggregation(size):
-    aggregation_data = request_generator(request_type="post", url="http://localhost:8081/bazel-stats/agg", request_body={
-        "aggregationSize": size,
-        "aggregations": [
-            "sum", "avg", "max", "min"
-        ]
-    })
+    aggregation_data = request_generator(request_type="post", url="http://localhost:8081/bazel-stats/agg",
+                                         request_body={
+                                             "aggregationSize": size,
+                                             "aggregations": [
+                                                 "sum", "avg", "max", "min"
+                                             ]
+                                         })
     return aggregation_data
 
 
@@ -72,10 +73,7 @@ def parse_data_for_comparison(value):
 bazel_stats_layout = html.Div(children=[
 
     html.H1(children='Bazel Stats'),
-
-    html.Div(children='''
-        A Graph That Represents The Aggregation Of The Last N Bazel Builds.
-    '''),
+    html.H3("Aggregation of the last N Bazel Builds."),
 
     dcc.Input(id="bazel-stats-agg-input", value=2, type="number", placeholder="Enter Bazel Stats Aggregation Size",
               min=2),
@@ -83,7 +81,7 @@ bazel_stats_layout = html.Div(children=[
         id='Bazel-Stats-Aggregation-Graph',
         figure={}
     ),
-
+    html.H3("Comparison of selected builds"),
     html.Div(
         id='my-dropdown-div-parent-bazel-stats',
         children=[

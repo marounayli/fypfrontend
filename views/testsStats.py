@@ -35,7 +35,7 @@ tests_stats_layout = [html.Div([html.H3("Statistics on the latest tests"),
                                     figure={},
                                     id='test_graph'
                                 ),
-                                html.H3("Aggregation of the last tests"),
+                                html.H3("Aggregation of the last N tests"),
                                 dcc.Input(id="test-bar-input", value=2, type="number", placeholder="Enter Aggregation "
                                                                                                    "Size"),
                                 dcc.Graph(
@@ -120,7 +120,7 @@ def graph_render(number):
     else:
         request_url = "http://localhost:8081/tests"
     df = parse_response_test(request_generator("get", request_url, None))
-    fig = px.line(df, x="Builds", y=tests_labels, height=800, title="CppCheck Data", template="presentation")
+    fig = px.line(df, x="Builds", y=tests_labels, height=800, title="Tests Data", template="presentation")
     fig.update_traces(mode='markers+lines')
     return fig
 
