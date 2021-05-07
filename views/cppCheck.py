@@ -48,7 +48,7 @@ def parse_data_for_comparison(value):
     # fetch stats and fill the res dictionary with relevant info
     for data in comparison_data:
         for type_of_data in data:
-            if type_of_data != 'build':
+            if type_of_data != 'build' and type_of_data != 'id':
                 res[data["build"]["build_name"]][type_of_data] = data[type_of_data]
     # return the data to visualize on the graph
     return px.bar(pd.DataFrame.from_dict(res), barmode="group", template="presentation")
@@ -86,7 +86,7 @@ cpp_check_layout = [html.Div([html.H3("Statistics on the latest cppChecks"),
                                   figure={},
                                   id='graph'
                               ),
-                              html.H3("Aggregation of the last cppChecks"),
+                              html.H3("Aggregation of the last N cppChecks"),
                               dcc.Input(id="bar-input", value=2, type="number", placeholder="Enter Aggregation Size"),
                               html.Div(id="bar-number-out"),
                               dcc.Graph(
