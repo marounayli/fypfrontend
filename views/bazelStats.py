@@ -21,7 +21,7 @@ def request_generator(request_type, url, request_body):
 
 
 def fetch_data_aggregation(size):
-    aggregation_data = request_generator(request_type="post", url="http://localhost:8081/bazel-stats/agg", request_body={
+    aggregation_data = request_generator(request_type="post", url="https://fypbackendstr.herokuapp.com/bazel-stats/agg", request_body={
         "aggregationSize": size,
         "aggregations": [
             "sum", "avg", "max", "min"
@@ -32,7 +32,7 @@ def fetch_data_aggregation(size):
 
 # fetch a list of the latest 10 bazel-builds objects for the dropdown list to be selected for stats comparison.
 def fetch_latest_build_names(size):
-    build_names_json = request_generator("get", "http://localhost:8081/builds/{}".format(size), None)
+    build_names_json = request_generator("get", "https://fypbackendstr.herokuapp.com/builds/{}".format(size), None)
     build_names_list = []
     for build in reversed(build_names_json):
         build_names_list.insert(0, build['buildName'])
@@ -55,7 +55,7 @@ def parse_data_for_comparison(value):
     if value is None or len(value) == 0:
         return {}
     # build request to fetch data.
-    comparison_data = request_generator(request_type="post", url="http://localhost:8081/builds-name/bazel-stats",
+    comparison_data = request_generator(request_type="post", url="https://fypbackendstr.herokuapp.com/builds-name/bazel-stats",
                                         request_body={"listOfBuildNames": value})
     res = dict()
 
