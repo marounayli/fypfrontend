@@ -14,9 +14,9 @@ from dash.dependencies import Input, Output
 
 import navbar as nv
 from views.bazelStats import bazel_stats_layout
+from views.testsStats import tests_stats_layout
 from views.cppCheck import cpp_check_layout
 from views.home import home_layout
-
 
 # assume you have a "long-form" data frame
 # see https://plotly.com/python/px-arguments/ for more options
@@ -38,7 +38,8 @@ layout_dict = {
     '/': home_layout,
     '/home': home_layout,
     '/bazel-stats': bazel_stats_layout,
-    '/cpp-check' : cpp_check_layout
+    '/cpp-check': cpp_check_layout,
+    '/tests-stats': tests_stats_layout,
 }
 
 
@@ -52,4 +53,4 @@ def page_content_update(pathname):
 
 if __name__ == '__main__':
     # Runs on the following port: http://127.0.0.1:8050/
-    app.run_server(host='0.0.0.0',debug=True)
+    app.run_server(host='0.0.0.0', debug=True)

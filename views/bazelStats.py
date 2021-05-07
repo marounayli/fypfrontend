@@ -11,17 +11,17 @@ base_url = "http://localhost:8081/bazel-stats/"
 
 
 # Method that receives the shape of a given request and returns a json object from the specified stats service.
-def request_generator(request_type, path, request_body):
+def request_generator(request_type, url, request_body):
     if request_type == "post":
-        response = requests.post(base_url + path, json=request_body).json()
+        response = requests.post(url, json=request_body)
     else:
-        response = requests.get(base_url + path).json()
+        response = requests.get(url)
 
-    return response
+    return response.json()
 
 
 def fetch_data_aggregation(size):
-    aggregation_data = request_generator(request_type="post", path="/agg", request_body={
+    aggregation_data = request_generator(request_type="post", url="http://localhost:8081/bazel-stats/agg", request_body={
         "aggregationSize": size,
         "aggregations": [
             "sum", "avg", "max", "min"
@@ -32,7 +32,7 @@ def fetch_data_aggregation(size):
 
 # fetch a list of the latest 10 bazel-builds objects for the dropdown list to be selected for stats comparison.
 def fetch_latest_build_names(size):
-    build_names_json = request_generator("get", "/build-names/{}".format(size), None)
+    build_names_json = request_generator("get", "http://localhost:8081/builds/{}".format(size), None)
     build_names_list = []
     for build in reversed(build_names_json):
         build_names_list.insert(0, build['buildName'])
@@ -54,9 +54,9 @@ def parse_data_for_aggregation(json_data):
 def parse_data_for_comparison(value):
     if value is None or len(value) == 0:
         return {}
-
     # build request to fetch data.
-    comparison_data = request_generator(request_type="post", path="/build", request_body={"listOfBuildNames": value})
+    comparison_data = request_generator(request_type="post", url="http://localhost:8081/builds-name/bazel-stats",
+                                        request_body={"listOfBuildNames": value})
     res = dict()
 
     for select_value in value:
@@ -64,7 +64,7 @@ def parse_data_for_comparison(value):
 
     for build_stats in comparison_data:
         for type_of_stats in build_stats['payload']:
-            res[build_stats['build_name']][type_of_stats['name']] = type_of_stats['time']
+            res[build_stats['build']["build_name"]][type_of_stats['name']] = type_of_stats['time']
 
     return px.bar(pd.DataFrame.from_dict(res), barmode="group")
 
@@ -94,7 +94,6 @@ bazel_stats_layout = html.Div(children=[
                 value=fetch_latest_build_names(2),
                 options=[],
                 multi=True,
-
             )
         ]
 
@@ -133,17 +132,17 @@ def bazel_stats_aggregation_graph_update(number):
     Output('bazel-stats-data-store', 'data'),
     Input('bazel-stats-interval', 'n_intervals'))
 def update_time(n_intervals):
-    print('fetching from api', fetch_latest_build_names(20))
+    # print('fetching from api', fetch_latest_build_names(20))
     return fetch_latest_build_names(10)
 
 
 @app.callback(
-        Output('bazel-stats-dropdown', 'options'),
+    Output('bazel-stats-dropdown', 'options'),
     [
         Input('bazel-stats-data-store', 'data'),
         Input('my-dropdown-div-parent-bazel-stats', 'n_clicks')
     ])
 def update_comp_graph(data, n_clicks):
-    print('fetching from store', data)
+    # print('fetching from store', data)
     if data:
         return [{'label': i, 'value': i} for i in data]
