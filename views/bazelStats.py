@@ -21,7 +21,7 @@ def request_generator(request_type, url, request_body):
 
 
 def fetch_data_aggregation(size):
-    aggregation_data = request_generator(request_type="post", url="/agg", request_body={
+    aggregation_data = request_generator(request_type="post", url="http://localhost:8081/bazel-stats/agg", request_body={
         "aggregationSize": size,
         "aggregations": [
             "sum", "avg", "max", "min"
@@ -41,20 +41,19 @@ def fetch_latest_build_names(size):
     return data
 
 
-# def parse_data_for_aggregation(json_data):
-#     res = dict()
-#     for key in json_data.keys():
-#         res[key] = dict()
-#     for key in json_data.keys():
-#         for obj in json_data[key]["payload"]:
-#             res[key][obj["name"]] = obj["time"]
-#     return res
+def parse_data_for_aggregation(json_data):
+    res = dict()
+    for key in json_data.keys():
+        res[key] = dict()
+    for key in json_data.keys():
+        for obj in json_data[key]["payload"]:
+            res[key][obj["name"]] = obj["time"]
+    return res
 
 
 def parse_data_for_comparison(value):
     if value is None or len(value) == 0:
         return {}
-    # print(value)
     # build request to fetch data.
     comparison_data = request_generator(request_type="post", url="http://localhost:8081/builds-name/bazel-stats",
                                         request_body={"listOfBuildNames": value})
@@ -64,7 +63,6 @@ def parse_data_for_comparison(value):
         res[select_value] = dict()
 
     for build_stats in comparison_data:
-        # print(build_stats)
         for type_of_stats in build_stats['payload']:
             res[build_stats['build']["build_name"]][type_of_stats['name']] = type_of_stats['time']
 
@@ -118,16 +116,16 @@ def update_graph(value):
     return parse_data_for_comparison(value)
 
 
-# # Update the aggregation graph based on the size provided by the input box
-# @app.callback(
-#     dash.dependencies.Output("Bazel-Stats-Aggregation-Graph", "figure"),
-#     dash.dependencies.Input("bazel-stats-agg-input", "value")
-# )
-# def bazel_stats_aggregation_graph_update(number):
-#     if number is None:
-#         number = 2
-#     aggregation_data = fetch_data_aggregation(number)
-#     return px.bar(pd.DataFrame.from_dict(parse_data_for_aggregation(aggregation_data)), barmode="group")
+# Update the aggregation graph based on the size provided by the input box
+@app.callback(
+    dash.dependencies.Output("Bazel-Stats-Aggregation-Graph", "figure"),
+    dash.dependencies.Input("bazel-stats-agg-input", "value")
+)
+def bazel_stats_aggregation_graph_update(number):
+    if number is None:
+        number = 2
+    aggregation_data = fetch_data_aggregation(number)
+    return px.bar(pd.DataFrame.from_dict(parse_data_for_aggregation(aggregation_data)), barmode="group")
 
 
 @app.callback(
