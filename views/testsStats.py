@@ -56,3 +56,4 @@ def graph_render(number):
     fig = px.line(df, x="Builds", y=tests_labels, height=800, title="CppCheck Data", template="presentation")
     fig.update_traces(mode='markers+lines')
     return fig
+
