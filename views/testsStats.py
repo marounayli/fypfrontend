@@ -49,9 +49,9 @@ def parse_response_test(payload):
 )
 def graph_render(number):
     if number:
-        request_url = "http://localhost:8081/tests" + str(number)
+        request_url = "https://fypbackendstr.herokuapp.com//tests" + str(number)
     else:
-        request_url = "http://localhost:8081/tests"
+        request_url = "https://fypbackendstr.herokuapp.com//tests"
     df = parse_response_test(request_generator("get", request_url, None))
     fig = px.line(df, x="Builds", y=tests_labels, height=800, title="CppCheck Data", template="presentation")
     fig.update_traces(mode='markers+lines')
