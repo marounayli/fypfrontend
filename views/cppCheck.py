@@ -93,6 +93,7 @@ cpp_check_layout = [html.Div([html.H3("Statistics on the latest cppChecks"),
                                   id='Aggregation-Graph',
                                   figure={}
                               ),
+                              html.H3("Comparison of selected builds"),
                               html.Div(
                                   id='my-dropdown-parent',
                                   children=[dcc.Store(id='data-store'),
@@ -128,7 +129,8 @@ def bar_render(number):
         "aggregationSize": int(aggregation_size),
         "aggregations": aggregation_type
     }
-    fig1 = px.bar(pd.DataFrame.from_dict(parse_data(request_generator("post", "http://localhost:8081/builds/cppCheck-agg", body))),
+    fig1 = px.bar(pd.DataFrame.from_dict(
+        parse_data(request_generator("post", "http://localhost:8081/builds/cppCheck-agg", body))),
                   barmode="group", template="presentation")
     return fig1
 
